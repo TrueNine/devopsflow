@@ -56,3 +56,36 @@ Expected guardrail:
 
 - Identify the projection gap.
 - Adjust events, command fields, or external-system relationship instead of polluting aggregate state.
+
+## Case 7: CRUD-Looking Admin Nouns
+
+Prompt: "My backend admin system has company, department, position, and employee. Redesign this part."
+
+Expected guardrail:
+
+- Mark the request as a CRUD-template risk instead of directly creating one aggregate for each noun.
+- Identify actors such as HR, tenant admin, department manager, employee, external OA system, and downstream account/permission domain when relevant.
+- Produce actor-command-event-impact chains before aggregate design.
+- Separate login account `User` from roster person `Employee` as a boundary candidate when both meanings may exist.
+- Treat employment/assignment/position holding as a candidate behavior concept instead of assuming employee has only one current position.
+- Put uncertain rules in conclusion items with affected events, commands, aggregates, read models, or relationships.
+
+## Case 8: Vague Data Change Events
+
+Prompt: "The event list includes 公司信息已变更, 部门信息已变更, 岗位信息已变更, 员工个人信息已变更."
+
+Expected guardrail:
+
+- Reject or split vague `信息已变更` events when specific business facts drive rules or projections.
+- Ask which changes are business-significant, such as name, parent department, responsible person, status, or contact channel.
+- Keep a generic change event only with an explicit justification.
+
+## Case 9: External Master Data Sync
+
+Prompt: "OA synchronizes companies, departments, positions, and employees."
+
+Expected guardrail:
+
+- Model OA as an external system actor when it is outside the current domain.
+- Distinguish received external facts, accepted/applied local facts, dependency-waiting states, conflicts, and failures when the business cares.
+- Do not model sync as simple upsert if parent-child ordering, missing dependencies, retries, or conflict resolution matter.

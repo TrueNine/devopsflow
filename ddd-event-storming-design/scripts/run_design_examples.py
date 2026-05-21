@@ -16,6 +16,7 @@ EXAMPLES = ROOT / "examples"
 CASES = [
     ("valid_design", EXAMPLES / "valid_design.md", ["--require-sections"], 0),
     ("table_first", EXAMPLES / "table_first.md", [], 1),
+    ("flat_admin", EXAMPLES / "flat_admin.md", [], 1),
 ]
 
 
