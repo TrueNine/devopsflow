@@ -15,3 +15,4 @@
 - Unproduced event: keep a domain event without a command, policy, process, or external fact that can produce it.
 - Unprojectable read model: define a read model that cannot be built from domain events without identifying the missing event or field.
 - Premature bounded contexts: split contexts before the current problem domain has enough evidence.
+- Artifact flooding: fill every `event-storming/` file in one pass for a new ambiguous requirement, causing speculative downstream events, commands, aggregates, and read models to look confirmed.

@@ -151,3 +151,17 @@ Expected guardrail:
 - If `request_user_input` is unavailable, do not finalize downstream design. State that user confirmation is required before continuing and ask one focused confirmation question in normal text.
 - Do not ask all high-impact decisions at once in the final answer.
 - Confirm decisions sequentially at the relevant gates: authority first, then assignment cardinality, then deletion/archive semantics.
+
+## Case 15: Artifact Flooding From New Ambiguous Requirement
+
+Prompt: "Create the whole event-storming repository for company, department, position, employee, OA sync, and account linkage."
+
+Expected guardrail:
+
+- Use collaborative brainstorming for the first response, not a full artifact-generation pass.
+- Treat the request as boundary-sensitive and CRUD-looking.
+- Create or update no `event-storming/` files before the user confirms the boundary and included responsibilities.
+- Present the next stage artifact only, such as `domain-boundary.md` candidate content or an equivalent chat section.
+- Explain which downstream artifacts are blocked by the current gate: `actors.md`, `events.md`, `commands.md`, `aggregates/*`, and `read-models.md`.
+- Ask one focused confirmation question about the problem boundary before continuing.
+- Do not fill events, commands, policies, aggregates, or read models with speculative conclusions just because the repository structure is known.

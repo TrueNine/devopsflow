@@ -19,6 +19,7 @@ CASES = [
     ("flat_admin", EXAMPLES / "flat_admin.md", [], 1),
     ("full_draft_before_gate", EXAMPLES / "full_draft_before_gate.md", [], 1),
     ("data_model_echo", EXAMPLES / "data_model_echo.md", [], 1),
+    ("artifact_flooding", EXAMPLES / "artifact_flooding.md", [], 1),
 ]
 
 

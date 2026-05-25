@@ -104,6 +104,11 @@ def find_confirmation_gate_violations(text: str) -> list[str]:
     )
     has_read_model_section = has_any(text, [r"读模型设计|#\s*读模型|##\s*读模型"])
 
+    if has_crud_noun_cluster and has_downstream_sections and not has_gate_question:
+        findings.append(
+            "artifact_flooding: CRUD-looking ambiguous input expanded into downstream events, commands, and aggregates without confirmation gate evidence"
+        )
+
     if has_crud_noun_cluster and has_gate_question and has_downstream_sections:
         findings.append(
             "confirmation_gate_skipped: CRUD-looking boundary question is still open while events, commands, and aggregates are already expanded"

@@ -39,6 +39,14 @@ Unless the user explicitly asks for implementation, produce only domain design a
 
 Prefer persistent domain modeling when the user is evolving the same business domain.
 
+Use a hybrid workflow: collaborative brainstorming for discovery, artifact-guided convergence for persistence.
+
+- Brainstorming is for divergent discovery: clarify business boundary, actors, authority, candidate events, alternatives, and unresolved rules through short sections and focused confirmation questions.
+- Artifact guidance is for convergence: once a section is stable or explicitly confirmed, capture it in the matching model artifact and make later sections depend on it.
+- Do not use an OpenSpec-style "generate all artifacts in one pass" flow for new DDD requirements. Event storming must not skip upstream confirmation gates just because a complete repository structure is known.
+- When the user wants a fast draft, still stop at the first unconfirmed gate that can change downstream events, commands, aggregates, or read models.
+- When the user wants files, treat each `event-storming/` file as a stage artifact. Create or update only the stage whose conclusions are confirmed; do not fill downstream files with speculative content.
+
 Use a two-stage workflow for requirements-driven modeling:
 
 1. Design draft: analyze the request, read relevant existing model files if any, brainstorm candidate events and modeling alternatives, infer the next useful design section, and present only the conclusions that are safe to validate at the current confirmation gate. Present a complete candidate model only after upstream gates that affect it are already confirmed or explicitly supplied by the user.
@@ -145,6 +153,16 @@ event-storming/
     <aggregate-name>.md
 ```
 
+Treat these files as ordered design artifacts, not as a checklist to complete immediately:
+
+1. `domain-boundary.md` must be stable before finalizing actors, events, commands, aggregates, or read models.
+2. `actors.md` must be stable before accepting events and commands, because command initiators and affected subjects define event meaning.
+3. `events.md` must distinguish candidate-event screening notes from accepted domain events. Accepted events require business meaning, production path, and downstream consequence.
+4. `commands.md`, `policies.md`, and `relationships.md` depend on accepted events and actor authority.
+5. `aggregates/<aggregate-name>.md` depends on a coherent command-event-rule model. Do not create aggregate files merely because nouns or tables exist.
+6. `read-models.md` depends on accepted events and projection needs. If a read model cannot be projected, return to events or command fields before persisting it.
+7. `completeness-check.md` is the final gate and should record remaining unresolved questions instead of hiding them in downstream artifacts.
+
 File responsibilities:
 
 - `README.md`: entry index only; current model status and file navigation.
@@ -167,13 +185,13 @@ For each user request:
 2. Read only relevant model files before deriving the draft.
 3. Build a candidate event pool before selecting final events.
 4. Compare modeling approaches when a candidate event, actor responsibility, or aggregate boundary has multiple plausible interpretations.
-5. Produce a complete candidate design that shows proposed changes to affected indexes and aggregate files together.
+5. Produce only the next safe design artifact when upstream gates are unresolved. Produce a complete candidate design only when boundary, actor/authority, key rules, and modeling alternatives are already confirmed or explicitly supplied.
 6. Call out assumptions, ambiguous terms, alternative interpretations, and missing business rules as inferred design conclusions, not as pre-design questions.
 7. Confirm design sections incrementally when their conclusions affect later modeling choices.
-8. After confirmation, update affected indexes and aggregate files together.
+8. After confirmation, update affected indexes and aggregate files together only for the confirmed stage and its directly affected dependents.
 9. Preserve semantic evolution notes when renaming, splitting, merging, or moving concepts.
 10. If a new requirement exposes an incomplete old model, fix the model instead of hiding the gap behind a Policy, service, or handler.
-11. End with a short summary of changed files, changed domain concepts, and remaining questions.
+11. End with a short summary of changed files, changed domain concepts, newly unlocked next artifact, and remaining questions.
 
 Do not regenerate the whole model unless the user asks or the existing model is too inconsistent to update safely.
 
@@ -192,6 +210,20 @@ Do not regenerate the whole model unless the user asks or the existing model is 
 - Iterate when commands, events, aggregates, or read models do not explain each other.
 
 ## Workflow
+
+Follow this stage order. A later stage is blocked when its gate question could change the later model.
+
+```text
+problem boundary
+  -> actors and authority
+  -> candidate event pool
+  -> event screening
+  -> accepted events
+  -> commands and policies
+  -> aggregates
+  -> read models
+  -> relationships and completeness check
+```
 
 ### 1. Define Scope
 
@@ -413,6 +445,8 @@ If an existing PlantUML event-storming style exists, continue it. Prefer one loc
 
 Before finalizing, check:
 
+- The current response did not generate downstream artifacts past an unconfirmed gate.
+- Persisted files were updated only for confirmed stages or directly affected dependents.
 - Candidate events were brainstormed before final event selection when the requirement had non-trivial ambiguity.
 - Rejected, split, renamed, downgraded, or unresolved candidate events have a stated reason when they matter to the design.
 - Meaningful modeling alternatives were compared before choosing contested event, policy, process, aggregate, or read-model boundaries.
@@ -438,6 +472,7 @@ Refuse or correct these patterns:
 - Renaming controller-service-dao into DDD layers.
 - Designing aggregates from database tables, CRUD pages, or REST resources.
 - Designing one aggregate per noun in a CRUD-looking prompt without proving lifecycle and consistency boundaries.
+- Filling every `event-storming/` file in one pass for a new ambiguous requirement before boundary, actor authority, key rules, and event screening are confirmed.
 - Flattening a multi-role workflow into a single administrator actor or a single "manage data" scenario.
 - Using vague data-change events such as `信息已变更` when a concrete business fact is available.
 - Treating external master-data sync as a simple upsert when ordering, dependency, failure, or conflict resolution has business meaning.
