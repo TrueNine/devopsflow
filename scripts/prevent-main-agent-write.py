@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ SUBAGENT_START_EVENTS = {"SubagentStart", "subagent_start", "subagentStart"}
 SUBAGENT_STOP_EVENTS = {"SubagentStop", "subagent_stop", "subagentStop"}
 SESSION_START_EVENTS = {"SessionStart", "session_start", "sessionStart"}
 PRE_TOOL_USE_EVENTS = {"PreToolUse", "pre_tool_use", "preToolUse", ""}
+PROTECTED_BRANCHES = {"main", "dev", "develop", "devlop"}
 SHELL_TOOL_NAMES = {"Bash", "shell", "exec", "exec_command", "unified_exec"}
 DIRECT_WRITE_TOOL_NAMES = {
   "Write",
@@ -101,7 +103,8 @@ def main() -> int:
   if tool_name in SUBAGENT_TOOL_NAMES:
     return 0
   tool_input = _find_tool_input(payload) or {}
-  decision = should_block_tool(tool_name, tool_input, session_id)
+  cwd = _find_workdir(payload, tool_input)
+  decision = should_block_tool(tool_name, tool_input, session_id, cwd)
   if decision is None:
     return 0
   _write_block_message(decision)
@@ -112,6 +115,7 @@ def should_block_tool(
   tool_name: str,
   tool_input: dict[str, Any],
   session_id: str | None,
+  cwd: str | None = None,
 ) -> BlockDecision | None:
   decision = _decision_for_tool(tool_name, tool_input)
   if decision is None:
@@ -126,6 +130,11 @@ def should_block_tool(
     )
   if not is_registered_subagent_session(session_id):
     return BlockDecision(f"{decision.reason}，当前 session `{session_id}` 未登记为 worker/subagent")
+  effective_cwd = cwd or _find_tool_workdir(tool_input)
+  if effective_cwd is not None:
+    protected_branch_decision = _protected_branch_write_decision(effective_cwd, decision.reason)
+    if protected_branch_decision is not None:
+      return protected_branch_decision
   return None
 
 
@@ -247,6 +256,23 @@ def _find_tool_input(payload: dict[str, Any]) -> dict[str, Any] | None:
 def _find_command(tool_input: dict[str, Any]) -> str | None:
   for key in COMMAND_KEYS:
     value = tool_input.get(key)
+    if isinstance(value, str) and value.strip():
+      return value
+  return None
+
+
+def _find_workdir(payload: dict[str, Any], tool_input: dict[str, Any]) -> str:
+  tool_workdir = _find_tool_workdir(tool_input)
+  if tool_workdir is not None:
+    return tool_workdir
+  value = payload.get("cwd")
+  if isinstance(value, str) and value.strip():
+    return value
+  return os.getcwd()
+
+
+def _find_tool_workdir(tool_input: dict[str, Any]) -> str | None:
+  for value in (tool_input.get("workdir"),):
     if isinstance(value, str) and value.strip():
       return value
   return None
@@ -378,6 +404,30 @@ def _git_subcommand(args: list[str]) -> str | None:
 
 def _is_global_git_push_decision(decision: BlockDecision) -> bool:
   return decision.reason.startswith("`git push` 已被全场拦截")
+
+
+def _protected_branch_write_decision(cwd: str, reason: str) -> BlockDecision | None:
+  current_branch = _current_branch(cwd)
+  if current_branch in PROTECTED_BRANCHES:
+    return BlockDecision(f"{reason}，当前分支 `{current_branch}` 受保护（cwd: {cwd}）")
+  return None
+
+
+def _current_branch(cwd: str) -> str | None:
+  try:
+    result = subprocess.run(
+      ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
+      cwd=cwd,
+      check=False,
+      text=True,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.DEVNULL,
+      timeout=2,
+    )
+  except (OSError, subprocess.TimeoutExpired):
+    return None
+  branch = result.stdout.strip()
+  return branch or None
 
 
 def _first_non_option(tokens: list[str]) -> str | None:

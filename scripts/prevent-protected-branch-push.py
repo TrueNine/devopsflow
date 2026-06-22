@@ -415,7 +415,7 @@ def _python_inline_code_writes(code: str) -> bool:
 def _block_current_branch_write(cwd: str, reason: str) -> BlockDecision | None:
   current_branch = _current_branch(cwd)
   if current_branch in PROTECTED_BRANCHES:
-    return BlockDecision(current_branch, reason)
+    return BlockDecision(current_branch, f"{reason}（cwd: {cwd}）")
   return None
 
 

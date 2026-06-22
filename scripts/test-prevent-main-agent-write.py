@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -157,6 +158,35 @@ class MainAgentWriteGuardTest(unittest.TestCase):
     self.assert_allowed_tool("Write", session_id="worker-1")
     self.assert_allowed_tool("Bash", {"command": "git add README.md"}, session_id="worker-1")
 
+  def test_blocks_registered_subagent_write_using_payload_workdir_branch(self) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+      root = Path(tempdir) / "root"
+      nested = root / "nested"
+      _init_git_repo(root, "codex/root-topic")
+      _init_git_repo(nested, "codex/topic")
+
+      self.start_subagent("worker-1")
+      self.assert_allowed_tool(
+        "Bash",
+        {"command": "touch marker", "workdir": str(root)},
+        session_id="worker-1",
+      )
+      self.assert_allowed_tool(
+        "Bash",
+        {"command": "touch marker", "workdir": str(nested)},
+        session_id="worker-1",
+      )
+
+      _switch_branch(root, "dev")
+      decision = HOOK.should_block_tool(
+        "Bash",
+        {"command": "touch marker", "workdir": str(root)},
+        session_id="worker-1",
+      )
+      self.assertIsNotNone(decision)
+      self.assertIn("cwd", decision.reason)
+      self.assertIn(str(root), decision.reason)
+
   def test_subagent_start_registers_builtin_names_without_worker_marker(self) -> None:
     self.start_subagent("explorer-session", "explorer")
     self.start_subagent("default-session", "default")
@@ -187,6 +217,20 @@ class MainAgentWriteGuardTest(unittest.TestCase):
     self.assertIn("${PLUGIN_ROOT}", hooks)
     self.assertNotIn("CLAUDE_PLUGIN_ROOT", hooks)
     self.assertNotIn("CODEX_PLUGIN_ROOT", hooks)
+
+
+def _init_git_repo(path: Path, branch: str) -> None:
+  path.mkdir(parents=True)
+  subprocess.run(["git", "init", "-b", branch], cwd=path, check=True, stdout=subprocess.DEVNULL)
+  subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=path, check=True)
+  subprocess.run(["git", "config", "user.name", "Test User"], cwd=path, check=True)
+  (path / "README.md").write_text("test\n", encoding="utf-8")
+  subprocess.run(["git", "add", "README.md"], cwd=path, check=True)
+  subprocess.run(["git", "commit", "-m", "init"], cwd=path, check=True, stdout=subprocess.DEVNULL)
+
+
+def _switch_branch(path: Path, branch: str) -> None:
+  subprocess.run(["git", "switch", "-c", branch], cwd=path, check=True, stdout=subprocess.DEVNULL)
 
 
 if __name__ == "__main__":

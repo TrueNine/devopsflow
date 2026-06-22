@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -101,6 +103,22 @@ class ProtectedBranchPushHookTest(unittest.TestCase):
     with patch.object(HOOK, "_current_branch", return_value="codex/task"):
       self.assertIsNone(HOOK.should_block_tool("Write", {}, "/repo"))
 
+  def test_uses_tool_workdir_for_nested_repository_branch_detection(self) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+      root = Path(tempdir) / "root"
+      nested = root / "nested"
+      _init_git_repo(root, "codex/root-topic")
+      _init_git_repo(nested, "codex/topic")
+
+      self.assertIsNone(HOOK.should_block_tool("Write", {}, str(root)))
+      self.assertIsNone(HOOK.should_block_tool("Write", {}, str(nested)))
+
+      _switch_branch(root, "dev")
+      decision = HOOK.should_block_tool("Write", {}, str(root))
+      self.assertIsNotNone(decision)
+      self.assertEqual(decision.branch, "dev")
+      self.assertIn(str(root), decision.reason)
+
   def test_blocks_shell_redirection_on_protected_branch(self) -> None:
     self.assert_blocked("printf hi > README.md", "develop")
     self.assert_blocked("printf hi>README.md", "develop")
@@ -142,6 +160,20 @@ class ProtectedBranchPushHookTest(unittest.TestCase):
     self.assert_blocked("sed -i 's/a/b/' README.md", "main")
     self.assert_blocked("sed --in-place 's/a/b/' README.md", "main")
     self.assert_blocked("python3 -c 'open(\"README.md\", \"w\").write(\"x\")'", "main")
+
+
+def _init_git_repo(path: Path, branch: str) -> None:
+  path.mkdir(parents=True)
+  subprocess.run(["git", "init", "-b", branch], cwd=path, check=True, stdout=subprocess.DEVNULL)
+  subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=path, check=True)
+  subprocess.run(["git", "config", "user.name", "Test User"], cwd=path, check=True)
+  (path / "README.md").write_text("test\n", encoding="utf-8")
+  subprocess.run(["git", "add", "README.md"], cwd=path, check=True)
+  subprocess.run(["git", "commit", "-m", "init"], cwd=path, check=True, stdout=subprocess.DEVNULL)
+
+
+def _switch_branch(path: Path, branch: str) -> None:
+  subprocess.run(["git", "switch", "-c", branch], cwd=path, check=True, stdout=subprocess.DEVNULL)
 
 
 if __name__ == "__main__":
