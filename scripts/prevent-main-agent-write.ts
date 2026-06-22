@@ -70,6 +70,33 @@ export function shouldBlockTool(
   return undefined
 }
 
+export function shouldBlockOpenCodeTool(
+  toolName: string,
+  toolInput: ToolInput,
+  isSubagent: boolean,
+  cwd?: string,
+): BlockDecision | undefined {
+  const decision = decisionForTool(toolName, toolInput)
+  if (!decision) return undefined
+  if (decision.escalation) return decision
+  if (isGlobalGitPushDecision(decision)) return decision
+
+  if (!isSubagent) {
+    return createBlockDecision(
+      "unknown",
+      `${decision.reason}，当前 OpenCode agent 不是 subagent，主 Agent 禁止写入`,
+    )
+  }
+
+  const effectiveCwd = cwd ?? findToolWorkdir(toolInput)
+  if (effectiveCwd) {
+    const protectedBranchDecision = protectedBranchWriteDecision(effectiveCwd, decision.reason)
+    if (protectedBranchDecision) return protectedBranchDecision
+  }
+
+  return undefined
+}
+
 function decisionForTool(toolName: string, toolInput: ToolInput): BlockDecision | undefined {
   if (DIRECT_WRITE_TOOL_NAMES.has(toolName)) {
     return createBlockDecision("unknown", `\`${toolName}\` 是直接写入工具`)
