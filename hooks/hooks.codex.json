@@ -1,59 +1,59 @@
 {
   "hooks": {
-  "SessionStart": [
-    {
-    "hooks": [
+    "SessionStart": [
       {
-      "type": "command",
-      "command": "python3 \"${PLUGIN_ROOT}/scripts/prevent-protected-branch-push.py\"",
-      "statusMessage": "devflow-skills: checking protected branch session"
-      },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/prevent-protected-branch-push.ts\"",
+            "statusMessage": "devflow-skills: checking protected branch session"
+          },
+          {
+            "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/prevent-main-agent-write.ts\"",
+            "statusMessage": "devflow-skills: showing coordinator-only mode"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
       {
-      "type": "command",
-      "command": "python3 \"${PLUGIN_ROOT}/scripts/prevent-main-agent-write.py\"",
-      "statusMessage": "devflow-skills: showing coordinator-only mode"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/prevent-main-agent-write.ts\"",
+            "statusMessage": "devflow-skills: registering worker session"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/prevent-main-agent-write.ts\"",
+            "statusMessage": "devflow-skills: unregistering worker session"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|shell|exec|exec_command|unified_exec|Write|Edit|MultiEdit|NotebookEdit|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/prevent-protected-branch-push.ts\"",
+            "statusMessage": "devflow-skills: checking protected branch writes"
+          },
+          {
+            "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/prevent-main-agent-write.ts\"",
+            "statusMessage": "devflow-skills: checking main-agent writes"
+          }
+        ]
       }
     ]
-    }
-  ],
-  "SubagentStart": [
-    {
-    "hooks": [
-      {
-      "type": "command",
-      "command": "python3 \"${PLUGIN_ROOT}/scripts/prevent-main-agent-write.py\"",
-      "statusMessage": "devflow-skills: registering worker session"
-      }
-    ]
-    }
-  ],
-  "SubagentStop": [
-    {
-    "hooks": [
-      {
-      "type": "command",
-      "command": "python3 \"${PLUGIN_ROOT}/scripts/prevent-main-agent-write.py\"",
-      "statusMessage": "devflow-skills: unregistering worker session"
-      }
-    ]
-    }
-  ],
-  "PreToolUse": [
-    {
-    "matcher": "Bash|shell|exec|exec_command|unified_exec|Write|Edit|MultiEdit|NotebookEdit|apply_patch",
-    "hooks": [
-      {
-      "type": "command",
-      "command": "python3 \"${PLUGIN_ROOT}/scripts/prevent-protected-branch-push.py\"",
-      "statusMessage": "devflow-skills: checking protected branch writes"
-      },
-      {
-      "type": "command",
-      "command": "python3 \"${PLUGIN_ROOT}/scripts/prevent-main-agent-write.py\"",
-      "statusMessage": "devflow-skills: checking main-agent writes"
-      }
-    ]
-    }
-  ]
   }
 }
