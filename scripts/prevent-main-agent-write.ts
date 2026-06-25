@@ -31,9 +31,10 @@ import {
   isSedWriteCommand,
   pythonWriteReason,
   isTestCommand,
+  containsGitOrGh,
 } from "../src/shared/command-parser"
 import { currentBranch, PROTECTED_BRANCHES } from "../src/shared/branch"
-import { loadState, saveState, isRegisteredSubagentSession, getStatePathEnv } from "../src/shared/state-store"
+import { loadState, saveState, isRegisteredSubagentSession, isDfPublisherSession, getStatePathEnv } from "../src/shared/state-store"
 import { createBlockDecision, type BlockDecision } from "../src/shared/types"
 import type { Payload, ToolInput } from "../src/shared/types"
 
@@ -46,7 +47,17 @@ export function shouldBlockTool(
   const decision = decisionForTool(toolName, toolInput)
   if (!decision) return undefined
   if (decision.escalation) return decision
-  if (isGlobalGitPushDecision(decision)) return decision
+  if (isGlobalGitPushDecision(decision)) {
+    if (sessionId && isDfPublisherSession(sessionId)) {
+      const effectiveCwd = cwd ?? findToolWorkdir(toolInput)
+      if (effectiveCwd) {
+        const pbDecision = protectedBranchWriteDecision(effectiveCwd, decision.reason)
+        if (pbDecision) return pbDecision
+      }
+      return undefined
+    }
+    return decision
+  }
 
   if (!sessionId) {
     return createBlockDecision(
@@ -75,11 +86,32 @@ export function shouldBlockOpenCodeTool(
   toolInput: ToolInput,
   isSubagent: boolean,
   cwd?: string,
+  isDfPublisher = false,
 ): BlockDecision | undefined {
+  const ocCommand = findCommand(toolInput)
+  if (ocCommand && containsGitOrGh(ocCommand)) {
+    if (isDfPublisher) {
+      if (cwd) {
+        const pbDecision = protectedBranchWriteDecision(cwd, "df-publisher 在保护分支上执行 git/gh 操作")
+        if (pbDecision) return pbDecision
+      }
+      return undefined
+    }
+    return createBlockDecision("unknown", "git/gh 操作已被禁止；请委托 df-publisher 子代理完成发布相关工作")
+  }
   const decision = decisionForTool(toolName, toolInput)
   if (!decision) return undefined
   if (decision.escalation) return decision
-  if (isGlobalGitPushDecision(decision)) return decision
+  if (isGlobalGitPushDecision(decision)) {
+    if (isDfPublisher) {
+      if (cwd) {
+        const pbDecision = protectedBranchWriteDecision(cwd, decision.reason)
+        if (pbDecision) return pbDecision
+      }
+      return undefined
+    }
+    return decision
+  }
 
   if (!isSubagent) {
     return createBlockDecision(

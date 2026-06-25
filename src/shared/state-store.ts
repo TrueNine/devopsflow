@@ -45,3 +45,13 @@ export function saveState(state: StateStore): void {
 export function isRegisteredSubagentSession(sessionId: string): boolean {
   return sessionId in loadState()
 }
+
+
+export const DF_PUBLISHER_AGENT_NAME = "df-publisher"
+
+export function isDfPublisherSession(sessionId: string): boolean {
+  const state = loadState()
+  const session = state[sessionId]
+  if (!session?.agent) return false
+  return session.agent.toLowerCase().includes(DF_PUBLISHER_AGENT_NAME)
+}

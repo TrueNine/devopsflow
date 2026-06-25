@@ -204,3 +204,33 @@ describe("MainAgentWriteGuard", () => {
     })
   })
 })
+
+
+describe("df-publisher push exemption", () => {
+  beforeEach(() => {
+    cleanupState()
+  })
+
+  afterEach(() => {
+    cleanupState()
+  })
+
+  it("allows df-publisher to git push", () => {
+    startSubagent("dfpub-1", "df-publisher")
+    expect(shouldBlockTool("Bash", { command: "git push origin codex/task" }, "dfpub-1")).toBeUndefined()
+    stopSubagent("dfpub-1")
+  })
+
+  it("blocks non-df-publisher worker git push", () => {
+    startSubagent("worker-1", "some-worker")
+    expect(shouldBlockTool("Bash", { command: "git push origin codex/task" }, "worker-1")).not.toBeNull()
+    stopSubagent("worker-1")
+  })
+
+  it("allows df-publisher to git add and commit", () => {
+    startSubagent("dfpub-1", "df-publisher")
+    expect(shouldBlockTool("Bash", { command: "git add README.md" }, "dfpub-1")).toBeUndefined()
+    expect(shouldBlockTool("Bash", { command: "git commit -m test" }, "dfpub-1")).toBeUndefined()
+    stopSubagent("dfpub-1")
+  })
+})

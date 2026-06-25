@@ -72,7 +72,7 @@ describe("OpenCode adapter", () => {
     expect(decision!.reason).toInclude("main")
   })
 
-  it("blocks git push for all agents", () => {
+  it("blocks git push for non-df-publisher agents", () => {
     const decision = shouldBlockOpenCodeToolInput({
       tool: "bash",
       args: { command: "git push origin feature/demo" },
@@ -81,15 +81,33 @@ describe("OpenCode adapter", () => {
     })
 
     expect(decision).not.toBeNull()
-    expect(decision!.reason).toInclude("全场拦截")
+    expect(decision!.reason).toInclude("git/gh")
+    expect(decision!.reason).toInclude("df-publisher")
   })
 
-  it("allows read-only commands for main agents", () => {
-    expect(shouldBlockOpenCodeToolInput({
+  it("blocks git status for non-df-publisher main agents", () => {
+    const decision = shouldBlockOpenCodeToolInput({
       tool: { name: "bash" },
       args: { command: "git status --short" },
       agent: { mode: "primary", name: "build" },
       project: { directory: mainRepo },
+    })
+    expect(decision).not.toBeNull()
+    expect(decision!.reason).toInclude("git/gh")
+  })
+
+  it("allows df-publisher to run git commands", () => {
+    expect(shouldBlockOpenCodeToolInput({
+      tool: { name: "bash" },
+      args: { command: "git push origin feature/demo" },
+      agent: { mode: "subagent", name: "df-publisher" },
+      project: { directory: featureRepo },
+    })).toBeUndefined()
+    expect(shouldBlockOpenCodeToolInput({
+      tool: { name: "bash" },
+      args: { command: "git status --short" },
+      agent: { mode: "subagent", name: "df-publisher" },
+      project: { directory: featureRepo },
     })).toBeUndefined()
   })
 })
