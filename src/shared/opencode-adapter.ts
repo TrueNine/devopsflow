@@ -18,11 +18,22 @@ export interface OpenCodeToolBeforeInput {
   readonly cwd?: unknown
 }
 
+export function isOpenCodeDfPublisher(input: OpenCodeToolBeforeInput): boolean {
+  const name = stringValue(input.agentName)
+    ?? stringValue(input.agent)
+    ?? stringValue(recordValue(input.agent, "name"))
+    ?? stringValue(recordValue(input.agent, "id"))
+    ?? stringValue(recordValue(input.session, "agentName"))
+    ?? stringValue(recordValue(recordValue(input.session, "agent"), "name"))
+  if (!name) return false
+  return name.toLowerCase().includes("df-publisher")
+}
+
 export function shouldBlockOpenCodeToolInput(input: OpenCodeToolBeforeInput): BlockDecision | undefined {
   const toolName = findOpenCodeToolName(input)
   const toolInput = findOpenCodeToolInput(input)
   const cwd = findOpenCodeCwd(input, toolInput)
-  return shouldBlockOpenCodeTool(toolName, toolInput, isOpenCodeSubagent(input), cwd)
+  return shouldBlockOpenCodeTool(toolName, toolInput, isOpenCodeSubagent(input), cwd, isOpenCodeDfPublisher(input))
 }
 
 export function isOpenCodeSubagent(input: OpenCodeToolBeforeInput): boolean {

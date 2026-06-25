@@ -368,3 +368,47 @@ function isTestLikeScriptName(scriptName: string): boolean {
   const normalized = scriptName.toLowerCase()
   return ["test", "check", "lint", "typecheck"].some((m) => normalized.includes(m))
 }
+
+
+export const SHELL_BINARIES = new Set([
+  "bash",
+  "sh",
+  "zsh",
+  "dash",
+  "ksh",
+  "fish",
+  "csh",
+  "tcsh",
+])
+
+export function binaryName(token: string): string {
+  const parts = token.split("/")
+  return parts[parts.length - 1]
+}
+
+export function extractWrappedScript(tokens: string[]): string | undefined {
+  if (!tokens.length) return undefined
+  const binary = binaryName(tokens[0])
+  if (SHELL_BINARIES.has(binary)) {
+    const cIndex = tokens.indexOf("-c")
+    if (cIndex !== -1 && cIndex + 1 < tokens.length) {
+      return tokens[cIndex + 1]
+    }
+  }
+  if (binary === "eval" && tokens.length > 1) {
+    return tokens.slice(1).join(" ")
+  }
+  return undefined
+}
+
+export function containsGitOrGh(command: string): boolean {
+  for (const segment of commandSegments(command)) {
+    const normalized = normalizeCommandPrefix(segment)
+    if (!normalized.length) continue
+    const binary = binaryName(normalized[0])
+    if (binary === "git" || binary === "gh") return true
+    const wrapped = extractWrappedScript(normalized)
+    if (wrapped && containsGitOrGh(wrapped)) return true
+  }
+  return false
+}

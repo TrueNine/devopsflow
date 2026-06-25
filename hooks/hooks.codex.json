@@ -5,6 +5,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/prevent-git-github-operations.ts\"",
+            "statusMessage": "devflow-skills: checking df-publisher agent installation"
+          },
+          {
+            "type": "command",
             "command": "bun \"${PLUGIN_ROOT}/scripts/prevent-protected-branch-push.ts\"",
             "statusMessage": "devflow-skills: checking protected branch session"
           },
@@ -42,6 +47,11 @@
       {
         "matcher": "Bash|shell|exec|exec_command|unified_exec|Write|Edit|MultiEdit|NotebookEdit|apply_patch",
         "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/prevent-git-github-operations.ts\"",
+            "statusMessage": "devflow-skills: checking git/gh operations"
+          },
           {
             "type": "command",
             "command": "bun \"${PLUGIN_ROOT}/scripts/prevent-protected-branch-push.ts\"",

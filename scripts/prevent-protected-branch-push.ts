@@ -27,6 +27,8 @@ import {
 import { currentBranch, PROTECTED_BRANCHES } from "../src/shared/branch"
 import { createBlockDecision, type BlockDecision } from "../src/shared/types"
 import type { Payload, ToolInput } from "../src/shared/types"
+import { findSessionId } from "../src/shared/payload"
+import { isDfPublisherSession } from "../src/shared/state-store"
 
 export function shouldBlockSessionStart(cwd: string): BlockDecision | undefined {
   const branch = currentBranch(cwd)
@@ -40,21 +42,22 @@ export function shouldBlockTool(
   toolName: string,
   toolInput: ToolInput,
   cwd: string,
+  isDfPublisher = false,
 ): BlockDecision | undefined {
   if (DIRECT_WRITE_TOOL_NAMES.has(toolName)) {
     return blockCurrentBranchWrite(cwd, `\`${toolName}\` 是直接写入工具`)
   }
   const command = findCommand(toolInput)
   if (!command) return undefined
-  return shouldBlock(command, cwd)
+  return shouldBlock(command, cwd, isDfPublisher)
 }
 
-export function shouldBlock(command: string, cwd: string): BlockDecision | undefined {
+export function shouldBlock(command: string, cwd: string, isDfPublisher = false): BlockDecision | undefined {
   for (const segment of commandSegments(command)) {
     const proxyDecision = proxyEscalationDecision(segment)
     if (proxyDecision) return proxyDecision
     const normalized = normalizeCommandPrefix(segment)
-    const gitPushDecision = analyzeGitPush(normalized)
+    const gitPushDecision = analyzeGitPush(normalized, cwd, isDfPublisher)
     if (gitPushDecision) return gitPushDecision
     const shellWriteDecision = analyzeShellWrite(normalized, cwd)
     if (shellWriteDecision) return shellWriteDecision
@@ -74,10 +77,13 @@ function proxyEscalationDecision(tokens: string[]): BlockDecision | undefined {
   return undefined
 }
 
-function analyzeGitPush(tokens: string[]): BlockDecision | undefined {
+function analyzeGitPush(tokens: string[], cwd: string, isDfPublisher: boolean): BlockDecision | undefined {
   if (!tokens.length || tokens[0] !== "git") return undefined
   const subcommand = gitSubcommand(tokens.slice(1))
   if (subcommand === "push") {
+    if (isDfPublisher) {
+      return blockCurrentBranchWrite(cwd, "`git push` 在保护分支上被禁止")
+    }
     return createBlockDecision("*", "`git push` 已被全场拦截；Agent 不允许执行任何推送")
   }
   return undefined
@@ -156,6 +162,8 @@ function main(): number {
   const toolInput = findToolInput(payload) ?? {}
   const cwd = findWorkdir(payload, toolInput)
   const hookEvent = findHookEvent(payload)
+  const sessionId = findSessionId(payload)
+  const isDfPublisher = sessionId ? isDfPublisherSession(sessionId) : false
 
   if (SESSION_HOOK_NAMES.has(hookEvent)) {
     const decision = shouldBlockSessionStart(cwd)
@@ -171,7 +179,7 @@ function main(): number {
     return 0
   }
 
-  const decision = shouldBlockTool(toolName, toolInput, cwd)
+  const decision = shouldBlockTool(toolName, toolInput, cwd, isDfPublisher)
   if (decision) {
     writeBlockMessage(decision)
     return 2

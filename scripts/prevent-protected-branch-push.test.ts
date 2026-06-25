@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "bun:test"
+import { describe, it, expect, beforeAll, beforeEach } from "bun:test"
 import { mkdtempSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -220,5 +220,47 @@ describe("ProtectedBranchPushHook", () => {
       expect(shouldBlock("sed --in-place 's/a/b/' README.md", mainRepo)).not.toBeNull()
       expect(shouldBlock("python3 -c 'open(\"README.md\", \"w\").write(\"x\")'", mainRepo)).not.toBeNull()
     })
+  })
+})
+
+
+import { isDfPublisherSession, loadState, saveState } from "../src/shared/state-store"
+import { setStatePathForTest } from "../src/shared/state-store"
+
+describe("df-publisher push exemption", () => {
+  beforeAll(() => {
+    const stateFile = join(tempDir, "pb-dfpub-sessions.json")
+    process.env.DEVFLOW_MAIN_AGENT_WRITE_STATE = stateFile
+  })
+
+  beforeEach(() => {
+    const state = loadState()
+    for (const key of Object.keys(state)) delete state[key]
+    saveState(state)
+  })
+
+  it("allows df-publisher push on feature branch", () => {
+    const state = loadState()
+    state["dfpub-1"] = { agent: "df-publisher" }
+    saveState(state)
+    expect(shouldBlock("git push origin feature/demo", featureRepo, true)).toBeUndefined()
+  })
+
+  it("blocks df-publisher push on protected branch", () => {
+    const state = loadState()
+    state["dfpub-1"] = { agent: "df-publisher" }
+    saveState(state)
+    const decision = shouldBlock("git push origin", devRepo, true)
+    expect(decision).not.toBeNull()
+    expect(decision!.reason).toInclude("保护分支")
+  })
+
+  it("still blocks non-df-publisher push", () => {
+    const state = loadState()
+    state["worker-1"] = { agent: "some-worker" }
+    saveState(state)
+    const decision = shouldBlock("git push origin feature/demo", featureRepo, false)
+    expect(decision).not.toBeNull()
+    expect(decision!.branch).toBe("*")
   })
 })
