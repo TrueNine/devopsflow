@@ -517,6 +517,24 @@ Use Mermaid or PlantUML only when:
 - the repository already uses that diagram style
 - a diagram significantly improves understanding
 
+Treat diagrams and visual workspaces as auxiliary review artifacts, not the source of truth. The canonical model remains the confirmed Markdown event-storming artifacts unless the project explicitly chooses a different source-of-truth format.
+
+Create a visual artifact after the relevant textual section is confirmed, not before:
+
+- After aggregate design is confirmed, create an aggregate command/fact flow when the aggregate has multiple commands, events, non-trivial invariants, or upstream-system paths.
+- After read-model design is confirmed, create a CQRS projection flow when the read model is event-projected, uses multiple event sources, or has multiple query consumers.
+- When the user asks for a diagram, produce the smallest visual that answers the current review question instead of redrawing the whole domain.
+
+Visual artifacts must:
+
+- use domain language in node labels, not implementation class names, table names, DTO names, package names, or framework names
+- distinguish actors, commands, aggregates, accepted domain events, policies/processes, read models, external systems, and rejected candidates when they appear in the same view
+- show only commands, events, aggregate state, and read-model fields that are present in confirmed textual artifacts, or clearly mark new items as candidates
+- keep read-model projection steps separate from domain-event justification; a diagram must not promote query refresh needs into domain events
+- record enough traceability that a reviewer can find the related command/event/aggregate/read-model section
+
+Optional adapters such as SVG files, Mermaid, PlantUML, diagrams.net, or `domain-designer-cli-node` may be used as visualization layers. If using `domain-designer-cli-node`, keep it as a design review workspace unless the project explicitly adopts it as canonical. Do not treat its code generation output as an implementation plan unless the DDD design is confirmed and a separate DDD-to-TDD handoff has been produced.
+
 If using Mermaid, use these labels:
 
 - `[Actor: 用户]`
@@ -530,6 +548,8 @@ If using Mermaid, use these labels:
 - `[ReadModel: 考勤记录]`
 
 If an existing PlantUML event-storming style exists, continue it. Prefer one local file per aggregate and a global file for cross-aggregate relationships.
+
+See `references/visual-artifacts.md` for visual artifact patterns, placement, and review gates.
 
 ## Completeness Check
 
@@ -555,6 +575,9 @@ Before finalizing, check:
 - No aggregate state field is justified only by snapshots, mappers, repositories, persistence records, read-model projections, page display, audit/log output, exports, reports, or database columns.
 - Every read model records whether each field comes from accepted events, current-state lookup, query-side joins, technical projection inputs, enriched payloads, or external read sources.
 - Every read-model-only field is marked as query-side data, technical projection input, current-state lookup, audit/log material, or external-source data instead of being promoted to a domain event.
+- Visual artifacts, when produced, mirror confirmed textual conclusions and do not introduce unconfirmed commands, events, aggregate state, or read-model fields.
+- Read-model diagrams separate accepted domain events from projection mechanics, query-side joins, current-state lookups, and external read sources.
+- Optional visualization workspaces such as `domain-designer-cli-node` include a short note that identifies the canonical source of truth and warns against using generated code as the implementation plan by default.
 - Policies do not hide aggregate invariants.
 - Domain services do not become procedural service layers.
 - Aggregates are derived from behavior, rules, identity, lifecycle, and invariants, not tables, CRUD resources, or noun lists.
@@ -578,6 +601,8 @@ Refuse or correct these patterns:
 - Creating domain events for technical actions the business does not care about.
 - Creating domain events only because a read model, page, report, cache, or projection needs a field refreshed.
 - Keeping aggregate state fields that are not read or changed by business methods and only exist for snapshots, persistence mapping, projections, or display.
+- Adding commands, events, aggregate state, or read-model fields because a visual tool needs a prettier or more complete graph.
+- Updating SVG, Mermaid, PlantUML, diagrams.net, or `domain-designer-cli-node` artifacts without updating the confirmed textual model, leaving reviewers unsure which model is authoritative.
 - Putting report/page/query fields into aggregates for convenience.
 - Putting most business rules into command handlers, application services, listeners, repositories, or policies.
 - Splitting bounded contexts before understanding the current problem domain.
@@ -589,4 +614,5 @@ See `references/anti-patterns.md` for a compact anti-pattern library when review
 
 - `references/anti-patterns.md`: DDD modeling anti-patterns to reject or correct.
 - `references/eval-cases.md`: evaluation cases for checking whether the skill preserves event-storming discipline.
+- `references/visual-artifacts.md`: diagram and optional visualization workspace rules for aggregate flows, CQRS projection flows, and tool adapters such as `domain-designer-cli-node`.
 - `scripts/validate_ddd_design.py`: lightweight heuristic checks for Markdown drafts or `event-storming/` repositories.

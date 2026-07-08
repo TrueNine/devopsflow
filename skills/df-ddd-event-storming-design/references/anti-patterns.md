@@ -16,6 +16,8 @@
 - Unjustified aggregate state: keep an aggregate state field that is not read or changed by a business method, does not protect an invariant, does not affect event production, and does not represent a lifecycle transition.
 - Fake lifecycle state: add status/source/type fields to an aggregate when no command/event changes them and no rule branches on them.
 - Projection-driven event: create a domain event only because a read model, page, report, cache, or projection needs a field refreshed.
+- Diagram-driven modeling: add commands, events, aggregate state, or read-model fields because a visual tool needs a prettier or more complete graph.
+- Visualization-as-source-of-truth drift: update SVG, Mermaid, PlantUML, diagrams.net, or `domain-designer-cli-node` artifacts without updating the confirmed textual model, leaving reviewers unsure which model is authoritative.
 - Framework-shaped domain: treat controllers, DTOs, repositories, or packages as the domain model.
 - Unproduced event: keep a domain event without a command, policy, process, or external fact that can produce it.
 - Unexplained read source: define a read model field without identifying whether it comes from accepted events, current-state lookup, query-side joins, technical projection input, enriched payloads, audit/log data, external sources, or a confirmed domain-event gap.
