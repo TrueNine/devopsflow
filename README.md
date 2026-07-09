@@ -131,25 +131,25 @@ bunfig.toml
 
 DevFlow can use project-owned style packs after the business design is clear. A style pack is not a shared DevFlow template; it is repository-owned material that helps agents preserve local implementation style through rules, golden examples, anti-patterns, and review checklists.
 
-Recommended project locations:
+Project-owned style packs have one default discovery location:
 
 ```text
-devflow-style-packs/
-.devflow/style-packs/
-.ai/style-packs/
-docs/devflow/style-packs/
+.devflow/style-pack/
 ```
 
 Recommended shape:
 
 ```text
-<style-pack-name>/
-  style-pack.yaml
-  rules.md
-  examples/
-  anti-patterns.md
-  review-checklist.md
+.devflow/style-pack/
+  <style-pack-name>/
+    .pack.toml
+    rules.md
+    examples/
+    anti-patterns.md
+    review-checklist.md
 ```
+
+`.pack.toml` describes metadata such as scope, applicable task types, primary examples, verification commands, review checks, and known exclusions.
 
 Use style packs with `df-glue-coding` after DDD, CQRS, API, security, validation, and persistence constraints are already respected. Keep project-specific examples in the project repository, not in this public DevFlow repository.
 

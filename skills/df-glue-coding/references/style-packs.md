@@ -21,20 +21,17 @@ Search project-owned material in this order:
 
 1. Explicit user-provided paths or names.
 2. `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, and local workflow docs that name style packs.
-3. `devflow-style-packs/`
-4. `.devflow/style-packs/`
-5. `.ai/style-packs/`
-6. `docs/devflow/style-packs/`
-7. `docs/patterns/`, `examples/`, `reference/`, and `references/`
+3. `.devflow/style-pack/`
+4. `docs/patterns/`, `examples/`, `reference/`, and `references/`
 
 If a style pack conflicts with current production code, prefer current production code unless the task is explicitly to migrate toward the style pack.
 
 ## Recommended Shape
 
 ```text
-devflow-style-packs/
+.devflow/style-pack/
   <style-pack-name>/
-    style-pack.yaml
+    .pack.toml
     rules.md
     examples/
       <golden-example files>
@@ -42,7 +39,7 @@ devflow-style-packs/
     review-checklist.md
 ```
 
-`style-pack.yaml` should describe the scope, applicable task types, primary examples, verification commands, and known exclusions.
+`.pack.toml` should describe metadata such as scope, applicable task types, primary examples, verification commands, review checks, and known exclusions.
 
 `rules.md` should contain concise rules that affect implementation choices, naming, layering, error handling, transaction boundaries, tests, or projection behavior.
 
